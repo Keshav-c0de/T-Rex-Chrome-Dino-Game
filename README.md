@@ -18,8 +18,8 @@ A fully functional replica of the famous Google Chrome offline dinosaur game, bu
 
 1.  **Clone the repository**
     ```bash
-    git clone [https://github.com/Keshav-c0de/T-Rex-Chrome-Dino-Game.git](https://github.com/Keshav-c0de/T-Rex-Chrome-Dino-Game.git)
-    cd dino-game
+    git clone https://github.com/Keshav-c0de/T-Rex-Chrome-Dino-Game.git
+    cd T-Rex-Chrome-Dino-Game
     ```
 
 2.  **Install Dependencies**
