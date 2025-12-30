@@ -1,4 +1,5 @@
-# 🦖 Chrome Dino Game Clone
+# Chrome Dino Game Clone<img width="87" height="94" alt="DinoRun1" src="https://github.com/user-attachments/assets/a420dd44-9d33-4c3c-97df-7e38c9ca900e" />
+
 
 A fully functional replica of the famous Google Chrome offline dinosaur game, built using **Python** and **Pygame**. 
 
@@ -9,9 +10,9 @@ A fully functional replica of the famous Google Chrome offline dinosaur game, bu
 * **Score System:** Tracks current score and increases difficulty every 100 points.
 * **Game States:** Includes a Start Menu with jump animation and a Game Over screen with restart functionality.
 
-## 📸 Screenshots
+## 📸 Screenshot
 
-![Game Play](assets/DinoRun1.png)
+<img width="1092" height="623" alt="Screenshot 2025-12-31 at 12 37 29 AM" src="https://github.com/user-attachments/assets/2fe63c23-30d4-41a8-836d-77d3c3d91620" />
 *Classic Gameplay*
 
 ## 🛠️ Installation & Setup
