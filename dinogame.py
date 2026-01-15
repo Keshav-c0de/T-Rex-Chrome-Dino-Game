@@ -25,12 +25,14 @@ large_cactus = [pygame.image.load(os.path.join("assets", "LargeCactus1.png")),
                 pygame.image.load(os.path.join("assets", "LargeCactus3.png"))]
 bird = [pygame.image.load(os.path.join("assets", "Bird1.png")),
         pygame.image.load(os.path.join("assets", "Bird2.png"))]
-
 cloud_img = pygame.image.load(os.path.join("assets", "Cloud.png"))
+cloud_img =pygame.transform.scale(cloud_img,(128,128))
 reset = pygame.image.load(os.path.join("assets", "Reset.png"))
 track = pygame.image.load(os.path.join("assets", "Track.png"))
 GameOver = pygame.image.load(os.path.join("assets", "GameOver.png"))
 DinoStart = pygame.image.load(os.path.join("assets", "DinoStart.png"))
+img = [pygame.image.load(os.path.join("assets", "sun.png")),
+                pygame.image.load(os.path.join("assets", "moon.png"))]
 
 #Sound_effects
 die = pygame.mixer.Sound(os.path.join("sound","die.mp3"))
@@ -45,6 +47,9 @@ score_color = (100, 100, 100)
 font_2 = pygame.font.SysFont("Helvetica", 30)
 font_1 = pygame.font.SysFont("Helvetica", 10)
 pygame.display.set_caption("Dino Game")
+night_filter = pygame.Surface((screen_width, screen_height))
+night_filter.fill((255, 255, 255)) 
+
 
 
 class Dinosaur:
@@ -180,38 +185,79 @@ def background():
         x_bg = 0
     x_bg -= game_speed
 
+
 def update_score():
-    global game_speed, score
+    global game_speed, score, is_night
     score += 1
     if score % 1000 == 0:
         point.play()
         game_speed += 0.1
+    if (score // 500) % 2 == 1:
+        is_night = True
+    else:
+        is_night = False
+
+def display_score(score,high_score):
+    # score display
     score_text = font_2.render("SCORE: " + str(score), True, score_color)
-    score_rect = score_text.get_rect(topleft=(900,20))
+    score_rect = score_text.get_rect(topleft=(20,900))
     screen.blit(score_text, score_rect)
+    # high score display
+    
+    high_score_text = font_2.render("HIGH-SCORE: " + str(high_score), True, score_color)
+    high_score_rect = high_score_text.get_rect(topleft=((20, 20)))
+    screen.blit(high_score_text, high_score_rect)
+
+def check_highscore(current_score):
+    high_score = 0
+    if os.path.exists("high_score.txt"):
+        try:
+            with open("high_score.txt", "r") as f:
+                high_score = int(f.read())
+        except:
+            high_score = 0
+    if current_score >= high_score:
+        high_score = current_score
+        with open("high_score.txt","w") as f:
+            f.write(str(high_score))
+
+    return high_score
+
+def apply_night_mode(screen):
+    current_frame = screen.copy()
+    screen.fill((255, 255, 255))
+    screen.blit(current_frame, (0, 0), special_flags=pygame.BLEND_SUB)
+
+def change_color(image, new_color):
+    colored_image = image.copy()
+    pixels = pygame.PixelArray(colored_image)
+    pixels.replace((0, 0, 0), new_color)
+    del pixels
+    return colored_image
 
 def main():
-    global game_speed, x_bg, y_bg, score, obstacles
+    global game_speed, x_bg, y_bg, score, obstacles, is_night
+    is_night = False
+    score = 0
     run = True
     clock = pygame.time.Clock()
+    high_score=check_highscore(score)
     obstacle_timer, cloud_timer = 0, 0
     spawn_delay = 1000  # Spawn every 1000 milliseconds (1 seconds)
     last_time = pygame.time.get_ticks()
     player = Dinosaur()
     clouds = Cloud()
     game_speed = 10
+    death_count = 0
     x_bg = 0
     y_bg = 380
-    score = 0
     obstacles = []
     clouds = []
-    death_count = 0
     obs = ["smallcactus", "largecactus", "bird"]
     ratio = [45,35,20]
 
     while run:
-        screen.fill(bg_color)
-
+        
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -277,37 +323,43 @@ def main():
                 # Collision
             if player.dino_rect.inflate(-20, -20).colliderect(obstacle.rect.inflate(-10, -10)):
                 die.play()
-                    # Draw "Game Over" ONCE before freezing
-                screen.blit(GameOver, GameOver.get_rect(center=(screen_width // 2, screen_height // 2 - 50)))
-                screen.blit(reset, reset.get_rect(center=(screen_width // 2, screen_height // 2 + 50)))
-                score_text = font_2.render("SCORE: " + str(score), True, score_color)
-                score_rect = score_text.get_rect(topleft=(900,20))
-                screen.blit(score_text, score_rect)
-                pygame.display.update()  # Update screen so player sees it
-                pygame.time.delay(2000) # Freeze for 2 seconds
+                high_score=check_highscore(score)
                 death_count += 1
-                menu(death_count)
-                
+                death_surface = screen.copy()
+                menu(death_count, score, death_surface)
 
+        if is_night:
+            apply_night_mode(screen)
+                
+         # updating and displaying scorces       
         update_score()
+        display_score(score,high_score)
+
+
         clock.tick(60)
         pygame.display.update()
 
-def menu(death_count):
-    global score
+def menu(death_count, score, death_surface):
+    global  mode 
+    mode = 0
+    high_score = check_highscore(score)
     is_jumping = False # The Flag
     menu_dino_y = 360
     jump_vel = 8.5
     run = True
     clock = pygame.time.Clock()
+    
+    img[0] = pygame.transform.scale(img[0], (64, 64))
+    img[0] =change_color(img[0],(100,100,100))
+    img[1] = pygame.transform.scale(img[1], (64, 64))
+    img[1] =change_color(img[1],(100,100,100))
 
     while run:
         clock.tick(60)
+        screen.fill(bg_color)
+        # starting screen display
         if death_count == 0:
-            screen.fill(bg_color)
-            text = ("PRESS ANY KEY TO START ;}")
-            text_display = font_1.render(text, True, score_color)
-            screen.blit(text_display,(950,580))
+            display_score(score, high_score)
             if is_jumping:
                 menu_dino_y -= jump_vel * 4
                 jump_vel -= 0.6
@@ -318,13 +370,34 @@ def menu(death_count):
             else:
                 screen.blit(DinoStart, DinoStart.get_rect(center=(120, int(menu_dino_y))))
 
-
+        # after death
         elif death_count > 0:
-            text = ("PRESS ANY KEY TO START ;}")
-            text_display = font_1.render(text, True, score_color)
-            screen.blit(text_display,(950,580))
+            # collision frame display
+            if death_surface:
+                screen.blit(death_surface, (0, 0))
+            else:
+                screen.fill(bg_color)
+             # gameover and reset display
+            screen.blit(GameOver, GameOver.get_rect(center=(screen_width // 2, screen_height // 2 - 50)))
+            screen.blit(reset, reset.get_rect(center=(screen_width // 2, screen_height // 2 + 50)))
+            score_text = font_2.render("SCORE: " + str(score), True, score_color)
+            score_rect = score_text.get_rect(topleft=(900,20))
+            screen.blit(score_text, score_rect)
+            display_score(score, high_score)
+    
+        # how to start
+        text = ("PRESS ANY KEY TO START ;}")
+        text_display = font_1.render(text, True, score_color)
+        screen.blit(text_display,(950,580))
 
-        pygame.display.update()
+        # Display_mode
+        img_rect = img[mode].get_rect(topleft=(900, 100))
+        if mode == 1:
+            is_night = True
+            screen.blit(img[mode], img_rect) # Draw Moon
+        else:
+            is_night = False
+            screen.blit(img[mode], img_rect)  # Draw Sun
 
 
         for event in pygame.event.get():
@@ -338,10 +411,16 @@ def menu(death_count):
                 else:
                     main()
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if death_count == 0:
-                    is_jumping = True 
+                mou_pos=pygame.mouse.get_pos()
+                if img_rect.collidepoint(mou_pos):
+                    mode = (mode+1)%2
                 else:
-                    main()
+                    if death_count == 0:
+                        is_jumping = True 
+                    else:        
+                        main()
+        if is_night:
+            apply_night_mode(screen)
+        pygame.display.update()
 
-
-menu(death_count=0) 
+menu(death_count=0, score =0, death_surface=None) 
