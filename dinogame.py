@@ -40,9 +40,10 @@ jump = pygame.mixer.Sound(os.path.join("sound","jump.mp3"))
 jump.set_volume(0.5)
 
 # Settings
-bg_color = (255, 255, 255)
+bg_color = (230, 230, 230)
 score_color = (100, 100, 100)
-font = pygame.font.SysFont("Helvetica", 30)
+font_2 = pygame.font.SysFont("Helvetica", 30)
+font_1 = pygame.font.SysFont("Helvetica", 10)
 pygame.display.set_caption("Dino Game")
 
 
@@ -69,30 +70,16 @@ class Dinosaur:
         self.y_jump = self.y_jump_vel
         self.jump_sound = jump
 
-    def update(self, userInput):
+    def update(self):
         if self.dino_duck:
             self.duck()
-        if self.dino_jump:
+        elif self.dino_jump:
             self.jump()
-        if self.dino_run:
+        else:
             self.run()
 
         if self.stepIndex >= 10:
             self.stepIndex = 0
-
-        if userInput[pygame.K_UP] or userInput[pygame.K_SPACE] and not self.dino_jump:
-            self.dino_jump = True
-            self.dino_run = False
-            self.dino_duck = False
-            self.jump_sound.play()
-        elif userInput[pygame.K_DOWN] and not self.dino_duck:
-            self.dino_jump = False
-            self.dino_run = False
-            self.dino_duck = True
-        elif not (self.dino_jump or userInput[pygame.K_DOWN]):
-            self.dino_jump = False
-            self.dino_run = True
-            self.dino_duck = False
 
     def duck(self):
         self.image = self.duck_ing[self.stepIndex // 5]
@@ -132,10 +119,10 @@ class Cloud:
     def update(self,clouds):
         self.x -= game_speed
         if self.x < -self.width:
-            self.x = screen_width + random.randint(2500, 3000)
+            self.x = screen_width + random.randint(1200, 3600)
             self.y = random.randint(50, 100)
-        if self.x < -self.width:
-            clouds.remove(self)
+        '''if self.x < -self.width:
+            clouds.remove(self)'''
 
     def draw(self, screen):
         screen.blit(self.image, (self.x, self.y))
@@ -174,7 +161,7 @@ class Bird(Obstacles):
     def __init__(self, image):
         self.type = 0
         super().__init__(image, self.type)
-        self.rect.y = 250
+        self.rect.y = random.randint(200,300)
         self.index = 0
 
     def draw(self, screen):
@@ -198,17 +185,17 @@ def update_score():
     score += 1
     if score % 1000 == 0:
         point.play()
-        game_speed += 1
-    text = font.render("SCORE: " + str(score), True, score_color)
-    text_rect = text.get_rect(center=(1000, 40))
-    screen.blit(text, text_rect)
+        game_speed += 0.1
+    score_text = font_2.render("SCORE: " + str(score), True, score_color)
+    score_rect = score_text.get_rect(topleft=(900,20))
+    screen.blit(score_text, score_rect)
 
 def main():
     global game_speed, x_bg, y_bg, score, obstacles
     run = True
     clock = pygame.time.Clock()
-    spawn_timer = 0
-    spawn_delay = 1000  # Spawn every 2000 milliseconds (2 seconds)
+    obstacle_timer, cloud_timer = 0, 0
+    spawn_delay = 1000  # Spawn every 1000 milliseconds (1 seconds)
     last_time = pygame.time.get_ticks()
     player = Dinosaur()
     clouds = Cloud()
@@ -229,33 +216,50 @@ def main():
             if event.type == pygame.QUIT:
                 run = False
                 sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE or event.key == pygame.K_UP:
+                    player.dino_jump = True
+                    player.dino_run = False
+                    player.dino_duck = False
+                    jump.play()
+                    
+                if event.key == pygame.K_DOWN:
+                    player.dino_jump = False
+                    player.dino_run = False
+                    player.dino_duck = True
+                    
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_DOWN:
+                    player.dino_duck = False
+                    player.dino_run = True
+
         screen.fill(bg_color)
 
-        # time to show Obstacles and cloud 
+        player.draw(screen)            
+        player.update()
+
+        # time for showing Obstacles and clouds 
         current_time = pygame.time.get_ticks()
         delta_time = current_time - last_time
         last_time = current_time
-        spawn_timer += delta_time * (game_speed / 10)
+        obstacle_timer += delta_time * (game_speed / 10)
+        cloud_timer += delta_time * (game_speed / 10)
         
         # Draw Background
         background()
-        if spawn_timer >= (spawn_delay+ random.randint(0, 200)):
-            spawn_timer = 0
-            if len(clouds) <= 2:
+        if cloud_timer >= (spawn_delay+ random.randint(0, 20)):
+            cloud_timer = 0
+            if len(clouds) <= 5:
                 clouds.append(Cloud())
         
         # drawing and removing clouds
-        for cloud in clouds[:]:
+        for cloud in clouds:
             cloud.draw(screen)
             cloud.update(clouds)
             
-        # Update Player
-        user_input = pygame.key.get_pressed()
-        player.draw(screen)
-        player.update(user_input)
 
         # Handle Obstacles
-        if spawn_timer >= spawn_delay:
+        if obstacle_timer >= spawn_delay:
             choice = random.choices(obs,weights=ratio,k=1)[0]
             if choice == "smallcactus":
                 obstacles.append(SmallCactus(small_cactus))
@@ -263,7 +267,7 @@ def main():
                 obstacles.append(LargeCactus(large_cactus))
             elif choice == "bird":
                 obstacles.append(Bird(bird))
-            spawn_timer = 0
+            obstacle_timer = 0
 
         # drawing and removing obstacles
         for obstacle in obstacles[:]:
@@ -271,12 +275,15 @@ def main():
             obstacle.update(obstacles)
                 
                 # Collision
-            if player.dino_rect.colliderect(obstacle.rect):
+            if player.dino_rect.inflate(-20, -20).colliderect(obstacle.rect.inflate(-10, -10)):
                 die.play()
                     # Draw "Game Over" ONCE before freezing
                 screen.blit(GameOver, GameOver.get_rect(center=(screen_width // 2, screen_height // 2 - 50)))
                 screen.blit(reset, reset.get_rect(center=(screen_width // 2, screen_height // 2 + 50)))
-                pygame.display.update() # Update screen so player sees it
+                score_text = font_2.render("SCORE: " + str(score), True, score_color)
+                score_rect = score_text.get_rect(topleft=(900,20))
+                screen.blit(score_text, score_rect)
+                pygame.display.update()  # Update screen so player sees it
                 pygame.time.delay(2000) # Freeze for 2 seconds
                 death_count += 1
                 menu(death_count)
@@ -298,6 +305,9 @@ def menu(death_count):
         clock.tick(60)
         if death_count == 0:
             screen.fill(bg_color)
+            text = ("PRESS ANY KEY TO START ;}")
+            text_display = font_1.render(text, True, score_color)
+            screen.blit(text_display,(950,580))
             if is_jumping:
                 menu_dino_y -= jump_vel * 4
                 jump_vel -= 0.6
@@ -310,9 +320,9 @@ def menu(death_count):
 
 
         elif death_count > 0:
-            score_text = font.render("SCORE: " + str(score), True, score_color)
-            score_rect = score_text.get_rect(center=(1000,40))
-            screen.blit(score_text, score_rect)
+            text = ("PRESS ANY KEY TO START ;}")
+            text_display = font_1.render(text, True, score_color)
+            screen.blit(text_display,(950,580))
 
         pygame.display.update()
 
@@ -327,7 +337,11 @@ def menu(death_count):
                     is_jumping = True 
                 else:
                     main()
-
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if death_count == 0:
+                    is_jumping = True 
+                else:
+                    main()
 
 
 menu(death_count=0) 
